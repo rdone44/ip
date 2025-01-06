@@ -29,27 +29,34 @@ def is_valid_ip(ip):
 def download_mmdb():
     """下载MaxMind GeoIP2数据库"""
     try:
-        # 检查当前时间
-        current_hour = datetime.datetime.now().hour
-        if os.environ.get('GITHUB_ACTIONS') and current_hour != 10:  # 不是北京时间10点
-            print("不在数据库更新时间，跳过下载")
-            return os.path.join("data", "GeoLite2-Country.mmdb")
-            
         data_dir = "data"
         ensure_dir(data_dir)
-        
-        url = "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-Country.mmdb"
-        response = requests.get(url)
-        
         db_path = os.path.join(data_dir, "GeoLite2-Country.mmdb")
-        with open(db_path, "wb") as f:
-            f.write(response.content)
+        
+        # 如果文件不存在或强制更新，则下载
+        if not os.path.exists(db_path) or os.environ.get('FORCE_UPDATE') == 'true':
+            print("正在下载数据库...")
+            url = "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-Country.mmdb"
+            response = requests.get(url)
             
-        # 验证文件
-        if os.path.exists(db_path) and os.path.getsize(db_path) > 0:
+            with open(db_path, "wb") as f:
+                f.write(response.content)
+                
             print("GeoIP2数据库更新成功")
         else:
-            print("警告：数据库文件可能未正确保存")
+            # 检查当前时间
+            current_hour = datetime.datetime.now().hour
+            if os.environ.get('GITHUB_ACTIONS') and current_hour != 10:  # 不是北京时间10点
+                print("不在数据库更新时间，跳过下载")
+            else:
+                print("正在更新数据库...")
+                url = "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-Country.mmdb"
+                response = requests.get(url)
+                
+                with open(db_path, "wb") as f:
+                    f.write(response.content)
+                    
+                print("GeoIP2数据库更新成功")
             
         return db_path
     except Exception as e:
